@@ -1,5 +1,5 @@
 # bakiak_game
-# 🩴 Bakiak Jaya RL
+# 🩴 Lomba Bakiak Nusantara
 
 **Bakiak Jaya RL** is a 3D web-based game inspired by the traditional Indonesian wooden clog racing competition (*Lomba Bakiak*), built using **Three.js** and **Tailwind CSS**. Developed collaboratively by **Tina, Serin, and Luna**, players must coordinate left and right steps in rhythm to race against AI opponents and cross the finish line first!
 
