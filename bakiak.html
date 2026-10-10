@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakiak Jaya - Ultra Realistis Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Bungee&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; user-select: none; }
+        .font-bungee { font-family: 'Bungee', cursive; }
+    </style>
+</head>
+<body class="bg-slate-950 text-white h-screen w-screen flex flex-col justify-between overflow-hidden">
+
+    <!-- Header / Navbar -->
+    <header class="absolute top-0 left-0 w-full z-20 flex justify-between items-center p-4 bg-gradient-to-b from-black/90 via-black/40 to-transparent pointer-events-auto">
+        <div class="flex items-center space-x-3">
+            <span class="text-3xl animate-bounce">🩴</span>
+            <div>
+                <h1 class="font-bungee text-lg sm:text-xl text-amber-400 tracking-wider drop-shadow-md">BAKIAK JAYA RL</h1>
+                <p class="text-xs text-slate-300">Dibuat oleh: <span class="text-amber-300 font-semibold">Tina, Serin, & Luna</span></p>
+            </div>
+        </div>
+        <div id="game-stats" class="hidden flex space-x-2 sm:space-x-4 items-center">
+            <div class="bg-black/70 backdrop-blur px-3 py-1.5 rounded-xl border border-white/10 text-xs sm:text-sm">
+                <span class="text-slate-400">Jarak:</span> <span id="stat-dist" class="font-bold text-amber-400">0</span> / <span id="stat-target">150</span>m
+            </div>
+            <div class="bg-black/70 backdrop-blur px-3 py-1.5 rounded-xl border border-white/10 text-xs sm:text-sm hidden sm:block">
+                <span class="text-slate-400">Tempo:</span> <span id="stat-rhythm" class="font-bold text-emerald-400">SIAP</span>
+            </div>
+            <div class="bg-black/70 backdrop-blur px-3 py-1.5 rounded-xl border border-white/10 text-xs sm:text-sm">
+                <span class="text-slate-400">Koin:</span> <span id="stat-coins" class="font-bold text-amber-300">0</span> 🪙
+            </div>
+            <button onclick="togglePause()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition">⏸ Pause</button>
+        </div>
+    </header>
+
+    <!-- Main 3D Canvas Container -->
+    <main id="canvas-container" class="relative w-full h-full flex-grow">
+        <!-- Screen Loading -->
+        <div id="loading-overlay" class="absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center space-y-6 p-4">
+            <div class="flex items-center space-x-2">
+                <span class="text-4xl animate-bounce">🩴</span>
+                <h2 class="font-bungee text-2xl text-amber-400 tracking-wider">BAKIAK JAYA</h2>
+            </div>
+            <div class="w-64 bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-amber-400/30">
+                <div id="loading-bar" class="bg-gradient-to-r from-red-600 to-amber-400 h-full w-0% rounded-full transition-all duration-300"></div>
+            </div>
+            <p id="loading-text" class="font-bungee text-sm text-slate-300 animate-pulse">Menyiapkan Arena Lomba...</p>
+            <div class="text-center pt-4 border-t border-slate-800 w-64">
+                <p class="text-xs text-slate-400">Karya Game oleh:</p>
+                <p class="text-sm font-bold text-amber-400 tracking-wide mt-1">✨ Tina • Serin • Luna ✨</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Menu / Shop Overlay -->
+    <div id="menu-overlay" class="absolute inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="text-center space-y-1">
+                <h2 class="font-bungee text-2xl text-amber-400">LOMBA RAKYAT</h2>
+                <p class="text-xs text-slate-400">Kompakkan Tim Bakiakmu & Jadilah Juara Pertama!</p>
+            </div>
+
+            <!-- Environment Selector -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">1. Pilih Lokasi Lomba RL</label>
+                <div class="grid grid-cols-2 gap-2" id="env-selector">
+                    <button onclick="selectEnv('kampung')" class="env-btn border-2 border-red-600 bg-red-600/10 p-2.5 rounded-2xl text-left transition flex flex-col justify-between h-18 relative overflow-hidden" data-env="kampung">
+                        <span class="text-xs font-bold text-red-400">Kampung Merah Putih</span>
+                        <span class="text-[10px] text-slate-300">Rumah Warga & Umbul-umbul</span>
+                    </button>
+                    <button onclick="selectEnv('alun')" class="env-btn border-2 border-slate-700 bg-slate-800/50 p-2.5 rounded-2xl text-left transition flex flex-col justify-between h-18 relative overflow-hidden" data-env="alun">
+                        <span class="text-xs font-bold text-amber-400">Alun-Alun Kabupaten</span>
+                        <span class="text-[10px] text-slate-300">Tribun Penonton & Panggung</span>
+                    </button>
+                    <button onclick="selectEnv('pantai')" class="env-btn border-2 border-slate-700 bg-slate-800/50 p-2.5 rounded-2xl text-left transition flex flex-col justify-between h-18 relative overflow-hidden" data-env="pantai">
+                        <span class="text-xs font-bold text-emerald-400">Pesta Pantai Tropis</span>
+                        <span class="text-[10px] text-slate-300">Pohon Kelapa & Ombak</span>
+                    </button>
+                    <button onclick="selectEnv('pegunungan')" class="env-btn border-2 border-slate-700 bg-slate-800/50 p-2.5 rounded-2xl text-left transition flex flex-col justify-between h-18 relative overflow-hidden" data-env="pegunungan">
+                        <span class="text-xs font-bold text-blue-400">Desa Pegunungan Sejuk</span>
+                        <span class="text-[10px] text-slate-300">Gunung Hijau & Kebun Teh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Opponent Selection -->
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">2. Lawan Tanding Tim Lain</label>
+                <select id="opponent-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                    <option value="anak">Tim Anak-Anak RT (Santai)</option>
+                    <option value="pkk" selected>Tim Ibu-Ibu PKK (Seimbang)</option>
+                    <option value="bapak">Tim Bapak-Bapak RT (Tantangan)</option>
+                    <option value="karang">Tim Karang Taruna (Master)</option>
+                </select>
+            </div>
+
+            <!-- Shop & Upgrades -->
+            <div class="bg-black/50 p-3 rounded-2xl border border-white/10 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-amber-400 uppercase">Warung Bakiak (Upgrade)</span>
+                    <span class="text-xs text-slate-300">Koin: <span id="shop-coins">0</span> 🪙</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <button onclick="buyUpgrade('speed')" class="bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-white/10 text-left transition flex flex-col justify-between">
+                        <span class="font-bold text-emerald-400">🩴 Kayu Ringan</span>
+                        <span id="up-speed" class="text-[10px] text-slate-300">Lvl. 1 (Biaya: 50 🪙)</span>
+                    </button>
+                    <button onclick="buyUpgrade('balance')" class="bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-white/10 text-left transition flex flex-col justify-between">
+                        <span class="font-bold text-amber-400">🪢 Tali Fleksibel</span>
+                        <span id="up-balance" class="text-[10px] text-slate-300">Lvl. 1 (Biaya: 50 🪙)</span>
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 font-bungee text-white rounded-2xl shadow-lg shadow-red-600/30 transition transform active:scale-95 text-base">
+                MULAI LOMBA SEKARANG! 🏆
+            </button>
+
+            <!-- Credits Footer -->
+            <div class="text-center pt-2 text-[11px] text-slate-400">
+                Created with ❤️ by <span class="text-amber-400 font-semibold">Tina, Serin, & Luna</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Controls Footer -->
+    <footer id="game-controls" class="hidden absolute bottom-0 left-0 w-full z-20 p-4 pb-6 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col items-center pointer-events-auto">
+        <div class="w-full max-w-lg flex flex-col items-center space-y-3">
+            <div id="rhythm-feedback" class="text-xs sm:text-sm font-bungee px-4 py-1.5 rounded-full bg-black/80 border border-white/20 text-amber-400 tracking-wider shadow-inner transition text-center">
+                LANGKAHKAN KIRI & KANAN BERGANTIAN!
+            </div>
+            <div class="grid grid-cols-2 gap-4 w-full">
+                <button id="btn-left" class="touch-btn h-24 sm:h-28 rounded-3xl bg-gradient-to-b from-red-600 to-red-800 border-4 border-red-400/50 shadow-xl flex flex-col items-center justify-center active:scale-95 transition">
+                    <span class="font-bungee text-lg sm:text-2xl text-white">KIRI</span>
+                    <span class="text-xs text-red-200 mt-1">[ A / Tap Kiri ]</span>
+                </button>
+                <button id="btn-right" class="touch-btn h-24 sm:h-28 rounded-3xl bg-gradient-to-b from-amber-600 to-amber-800 border-4 border-amber-400/50 shadow-xl flex flex-col items-center justify-center active:scale-95 transition">
+                    <span class="font-bungee text-lg sm:text-2xl text-white">KANAN</span>
+                    <span class="text-xs text-amber-200 mt-1">[ D / Tap Kanan ]</span>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="hidden absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="max-w-sm w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+            <div id="result-emoji" class="text-5xl animate-bounce">🏆</div>
+            <h3 id="result-title" class="font-bungee text-xl text-amber-400">JUARA PERTAMA!</h3>
+            <p id="result-desc" class="text-sm text-slate-300">Hebat! Tim bakiakmu memenangkan perlombaan!</p>
+            <div class="bg-black/40 p-3 rounded-2xl border border-white/10 text-xs space-y-1">
+                <p>Waktu Total: <span id="res-time" class="font-bold text-amber-400">0.0</span> detik</p>
+                <p>Hadiah Koin: <span id="res-coins" class="font-bold text-emerald-400">+0</span> 🪙</p>
+            </div>
+            <button onclick="resetMenu()" class="w-full py-3 bg-red-600 hover:bg-red-500 font-bungee text-white rounded-2xl transition shadow-lg shadow-red-600/30">
+                KEMBALI KE MENU
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = false;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playStomp() {
+                if (!this.ctx || this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(45, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+            playFall() {
+                if (!this.ctx || this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(25, this.ctx.currentTime + 0.35);
+
+                gain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+            playCheer() {
+                if (!this.ctx || this.isMuted) return;
+                const bufferSize = this.ctx.sampleRate * 0.7;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.sin(i / bufferSize * Math.PI);
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1500;
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.45, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.7);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+        }
+
+        const audio = new AudioEngine();
+
+        let coins = parseInt(localStorage.getItem('bakiak_coins') || '150');
+        let upgrades = JSON.parse(localStorage.getItem('bakiak_upgrades') || '{"speed":1, "balance":1}');
+        
+        function updateShopUI() {
+            document.getElementById('stat-coins').innerText = coins;
+            document.getElementById('shop-coins').innerText = coins;
+            document.getElementById('up-speed').innerText = `Lvl. ${upgrades.speed} (Biaya: ${upgrades.speed * 50} 🪙)`;
+            document.getElementById('up-balance').innerText = `Lvl. ${upgrades.balance} (Biaya: ${upgrades.balance * 50} 🪙)`;
+            localStorage.setItem('bakiak_coins', coins);
+            localStorage.setItem('bakiak_upgrades', JSON.stringify(upgrades));
+        }
+        updateShopUI();
+
+        function buyUpgrade(type) {
+            const cost = upgrades[type] * 50;
+            if (coins >= cost) {
+                coins -= cost;
+                upgrades[type]++;
+                updateShopUI();
+            }
+        }
+
+        let currentEnv = 'kampung';
+        let selectedOpponent = 'pkk';
+        let gameState = 'MENU';
+        let distance = 0;
+        let targetDistance = 150;
+        let speed = 0;
+        let lastFoot = null;
+        let rhythmStreak = 0;
+        let gameTime = 0;
+
+        const opponentTypes = {
+            anak: { name: 'Tim Anak-Anak', speed: 2.3, errorChance: 0.035 },
+            pkk: { name: 'Ibu-Ibu PKK', speed: 2.8, errorChance: 0.022 },
+            bapak: { name: 'Bapak-Bapak RT', speed: 3.3, errorChance: 0.014 },
+            karang: { name: 'Karang Taruna', speed: 3.8, errorChance: 0.007 }
+        };
+
+        let opponentsData = [];
+        let spectatorGroups = [];
+        let flagGroups = [];
+        let clouds = [];
+
+        function selectEnv(env) {
+            currentEnv = env;
+            document.querySelectorAll('.env-btn').forEach(btn => {
+                btn.classList.remove('border-red-600', 'bg-red-600/10');
+                btn.classList.add('border-slate-700', 'bg-slate-800/50');
+            });
+            const activeBtn = document.querySelector(`[data-env="${env}"]`);
+            activeBtn.classList.remove('border-slate-700', 'bg-slate-800/50');
+            activeBtn.classList.add('border-red-600', 'bg-red-600/10');
+        }
+
+        function startGame() {
+            audio.init();
+            selectedOpponent = document.getElementById('opponent-select').value;
+            document.getElementById('menu-overlay').classList.add('hidden');
+            document.getElementById('game-stats').classList.remove('hidden');
+            document.getElementById('game-controls').classList.remove('hidden');
+
+            distance = 0;
+            speed = 0;
+            lastFoot = null;
+            rhythmStreak = 0;
+            gameTime = 0;
+
+            const laneOffsets = [-3.6, -1.8, 1.8, 3.6];
+            const baseAI = opponentTypes[selectedOpponent];
+            
+            if (opponentsData.length > 0) {
+                opponentsData.forEach(ai => scene.remove(ai.teamGroup));
+            }
+
+            opponentsData = laneOffsets.map((offset, idx) => {
+                const teamGroup = createTeamMesh([0x2563eb, 0x16a34a, 0xf59e0b, 0x9333ea][idx]);
+                teamGroup.position.set(offset, 0, 0);
+                return {
+                    x: offset,
+                    progress: 0,
+                    speed: baseAI.speed * (0.9 + Math.random() * 0.2),
+                    stumbling: false,
+                    stumbleTimer: 0,
+                    teamGroup: teamGroup
+                };
+            });
+
+            gameState = 'PLAYING';
+            rebuildEnvironment();
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') gameState = 'PAUSED';
+            else if (gameState === 'PAUSED') gameState = 'PLAYING';
+        }
+
+        function resetMenu() {
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('game-stats').classList.add('hidden');
+            document.getElementById('game-controls').classList.add('hidden');
+            document.getElementById('menu-overlay').classList.remove('hidden');
+            gameState = 'MENU';
+            updateShopUI();
+        }
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x87ceeb, 0.006);
+
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 2.4, 5.0);
+        camera.rotation.x = -0.18;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+        sunLight.position.set(50, 80, 40);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+
+        let envGroup = new THREE.Group();
+        scene.add(envGroup);
+
+        function rebuildEnvironment() {
+            while(envGroup.children.length > 0){ 
+                envGroup.remove(envGroup.children[0]); 
+            }
+            spectatorGroups = [];
+            flagGroups = [];
+            clouds = [];
+
+            if (currentEnv === 'kampung') {
+                scene.background = new THREE.Color(0x60a5fa);
+                scene.fog.color = new THREE.Color(0x93c5fd);
+                buildKampungScenery();
+            } else if (currentEnv === 'alun') {
+                scene.background = new THREE.Color(0x38bdf8);
+                scene.fog.color = new THREE.Color(0xbae6fd);
+                buildAlunScenery();
+            } else if (currentEnv === 'pantai') {
+                scene.background = new THREE.Color(0x0ea5e9);
+                scene.fog.color = new THREE.Color(0x7dd3fc);
+                buildPantaiScenery();
+            } else if (currentEnv === 'pegunungan') {
+                scene.background = new THREE.Color(0x34d399);
+                scene.fog.color = new THREE.Color(0xa7f3d0);
+                buildPegununganScenery();
+            }
+            buildCloudsAndSky();
+        }
+
+        function buildCloudsAndSky() {
+            const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, roughness: 1 });
+            for (let i = 0; i < 25; i++) {
+                const cloudGroup = new THREE.Group();
+                const puffs = 3 + Math.floor(Math.random() * 4);
+                for (let p = 0; p < puffs; p++) {
+                    const puff = new THREE.Mesh(new THREE.SphereGeometry(3 + Math.random() * 2, 8, 8), cloudMat);
+                    puff.position.set((p - puffs/2) * 3.5, Math.random() * 1.5, (Math.random() - 0.5) * 4);
+                    cloudGroup.add(puff);
+                }
+                cloudGroup.position.set((Math.random() - 0.5) * 180, 35 + Math.random() * 20, -Math.random() * 500);
+                envGroup.add(cloudGroup);
+                clouds.push(cloudGroup);
+            }
+        }
+
+        function buildBaseTrack() {
+            const groundGeo = new THREE.PlaneGeometry(600, 1800);
+            const groundMat = new THREE.MeshStandardMaterial({ 
+                color: currentEnv === 'pegunungan' ? 0x4d7c0f : (currentEnv === 'pantai' ? 0xd97706 : 0x65a30d),
+                roughness: 0.9 
+            });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.set(0, -0.1, -700);
+            envGroup.add(ground);
+
+            const streetGeo = new THREE.BoxGeometry(11.5, 0.04, 1600);
+            const streetMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+            const streetMesh = new THREE.Mesh(streetGeo, streetMat);
+            streetMesh.position.set(0, 0, -700);
+            envGroup.add(streetMesh);
+
+            const finishGeo = new THREE.BoxGeometry(11.5, 0.1, 3.0);
+            const finishMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const finish = new THREE.Mesh(finishGeo, finishMat);
+            finish.position.set(0, 0.02, -targetDistance);
+            envGroup.add(finish);
+
+            const archLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 9.0), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+            archLeft.position.set(-6.2, 4.5, -targetDistance);
+            const archRight = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 9.0), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+            archRight.position.set(6.2, 4.5, -targetDistance);
+            const archTop = new THREE.Mesh(new THREE.BoxGeometry(12.8, 1.0, 0.8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            archTop.position.set(0, 9.0, -targetDistance);
+            envGroup.add(archLeft, archRight, archTop);
+        }
+
+        function buildKampungScenery() {
+            buildBaseTrack();
+            for (let i = -150; i <= 0; i += 14) {
+                createTraditionalHouse(-16, i);
+                createTraditionalHouse(16, i);
+                createUmbulUmbulAndFlags(-6.8, i);
+                createUmbulUmbulAndFlags(6.8, i);
+                createDetailedSpectatorGroup(-8.8, i);
+                createDetailedSpectatorGroup(8.8, i);
+            }
+        }
+
+        function buildAlunScenery() {
+            buildBaseTrack();
+            for (let i = -150; i <= 0; i += 16) {
+                createTribunStand(-18, i);
+                createTribunStand(18, i);
+                createUmbulUmbulAndFlags(-6.8, i);
+                createUmbulUmbulAndFlags(6.8, i);
+                createDetailedSpectatorGroup(-8.8, i);
+                createDetailedSpectatorGroup(8.8, i);
+            }
+        }
+
+        function buildPantaiScenery() {
+            buildBaseTrack();
+            for (let i = -150; i <= 0; i += 16) {
+                createPalmTree(-16, i);
+                createPalmTree(16, i);
+                createUmbulUmbulAndFlags(-6.8, i);
+                createUmbulUmbulAndFlags(6.8, i);
+                createDetailedSpectatorGroup(-8.8, i);
+                createDetailedSpectatorGroup(8.8, i);
+            }
+        }
+
+        function buildPegununganScenery() {
+            buildBaseTrack();
+            const mountainGeo = new THREE.ConeGeometry(150, 80, 16);
+            const mountainMat = new THREE.MeshStandardMaterial({ color: 0x166534 });
+            const mountain = new THREE.Mesh(mountainGeo, mountainMat);
+            mountain.position.set(0, 40, -950);
+            envGroup.add(mountain);
+
+            for (let i = -150; i <= 0; i += 14) {
+                createPineTree(-16, i);
+                createPineTree(16, i);
+                createDetailedSpectatorGroup(-8.8, i);
+                createDetailedSpectatorGroup(8.8, i);
+            }
+        }
+
+        function createTraditionalHouse(x, z) {
+            const house = new THREE.Group();
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(7, 4.5, 7), new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.8 }));
+            wall.position.y = 2.25;
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(5.5, 3.2, 4), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6 }));
+            roof.position.y = 6.1;
+            roof.rotation.y = Math.PI / 4;
+            house.add(wall, roof);
+            house.position.set(x, 0, z);
+            envGroup.add(house);
+        }
+
+        function createTribunStand(x, z) {
+            const stand = new THREE.Mesh(new THREE.BoxGeometry(7, 3.5, 12), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+            stand.position.set(x, 1.75, z);
+            envGroup.add(stand);
+        }
+
+        function createPalmTree(x, z) {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 14, 8), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+            trunk.position.set(x, 7, z);
+            envGroup.add(trunk);
+        }
+
+        function createPineTree(x, z) {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 5), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+            trunk.position.set(x, 2.5, z);
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(4, 9, 8), new THREE.MeshStandardMaterial({ color: 0x14532d }));
+            leaves.position.set(x, 8, z);
+            envGroup.add(trunk, leaves);
+        }
+
+        function createUmbulUmbulAndFlags(x, z) {
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 12), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
+            pole.position.set(x, 6, z);
+            const flag = new THREE.Mesh(new THREE.ConeGeometry(1.0, 5.5, 4), new THREE.MeshStandardMaterial({ color: Math.random() > 0.5 ? 0xdc2626 : 0xffffff }));
+            flag.position.set(x + 0.5, 7.4, z);
+            envGroup.add(pole, flag);
+            flagGroups.push(flag);
+        }
+
+        function createDetailedSpectatorGroup(x, z) {
+            const group = new THREE.Group();
+            const skinColors = [0xfcd34d, 0xfbbf24, 0xd97706];
+            const shirtColors = [0xdc2626, 0xffffff, 0x2563eb, 0x16a34a, 0xf59e0b];
+
+            for (let i = 0; i < 3; i++) {
+                const skinMat = new THREE.MeshStandardMaterial({ color: skinColors[i % skinColors.length], roughness: 0.7 });
+                const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColors[(i + z) % shirtColors.length], roughness: 0.6 });
+                const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+
+                const person = new THREE.Group();
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), skinMat);
+                head.position.y = 1.45;
+
+                const hair = new THREE.Mesh(new THREE.SphereGeometry(0.29, 12, 12), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+                hair.position.set(0, 1.5, -0.04);
+                hair.scale.set(1, 0.75, 1);
+
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.5, 0.24), shirtMat);
+                torso.position.y = 0.9;
+
+                const armL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1), shirtMat);
+                armL.position.set(-0.25, 0.9, 0);
+                armL.rotation.z = 0.5;
+
+                const armR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1), shirtMat);
+                armR.position.set(0.25, 0.9, 0);
+                armR.rotation.z = -0.5;
+
+                const legs = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.45, 0.15), pantsMat);
+                legs.position.y = 0.45;
+
+                person.add(head, hair, torso, armL, armR, legs);
+                person.position.set((i - 1) * 0.45, 0, (i * 0.2));
+                group.add(person);
+            }
+            group.position.set(x, 0, z);
+            envGroup.add(group);
+            spectatorGroups.push(group);
+        }
+
+        function createRealisticPerson(shirtColor) {
+            const person = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.6 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), skinMat);
+            head.position.y = 1.52;
+
+            const hair = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 16), new THREE.MeshStandardMaterial({ color: 0x09090b }));
+            hair.position.set(0, 1.58, -0.05);
+            hair.scale.set(1, 0.8, 1);
+
+            const headband = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.08, 16), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+            headband.position.set(0, 1.58, 0);
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.26), shirtMat);
+            torso.position.y = 0.95;
+
+            const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.42, 0.12), shirtMat);
+            leftArm.position.set(-0.28, 0.95, 0);
+            const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.42, 0.12), shirtMat);
+            rightArm.position.set(0.28, 0.95, 0);
+
+            const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.48, 0.13), pantsMat);
+            leftLeg.position.set(-0.12, 0.5, 0);
+            const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.48, 0.13), pantsMat);
+            rightLeg.position.set(0.12, 0.5, 0);
+
+            person.add(head, hair, headband, torso, leftArm, rightArm, leftLeg, rightLeg);
+            person.userData = { leftLeg, rightLeg, leftArm, rightArm };
+            return person;
+        }
+
+        function createTeamMesh(shirtColor) {
+            const teamGroup = new THREE.Group();
+            
+            const plankMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 });
+            const leftPlank = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.14, 3.2), plankMat);
+            leftPlank.position.set(-0.42, 0.09, 0);
+            const rightPlank = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.14, 3.2), plankMat);
+            rightPlank.position.set(0.42, 0.09, 0);
+            teamGroup.add(leftPlank, rightPlank);
+
+            const characters = [];
+            for (let zOffset of [-1.0, 0, 1.0]) {
+                const person = createRealisticPerson(shirtColor);
+                person.position.set(0, 0.16, zOffset);
+                teamGroup.add(person);
+                characters.push(person);
+            }
+            teamGroup.userData = { characters };
+            scene.add(teamGroup);
+            return teamGroup;
+        }
+
+        const playerTeam = createTeamMesh(0xdc2626);
+
+        function stepFoot(foot) {
+            if (gameState !== 'PLAYING') return;
+            audio.init();
+
+            if (foot === lastFoot) {
+                triggerFall();
+                return;
+            }
+
+            lastFoot = foot;
+            rhythmStreak++;
+            audio.playStomp();
+
+            const speedBoost = 3.6 + (upgrades.speed * 0.38) + Math.min(rhythmStreak * 0.15, 3.2);
+            speed = speedBoost;
+
+            const rhythmEl = document.getElementById('stat-rhythm');
+            rhythmEl.innerText = foot === 'L' ? 'KIRI (Mantap!)' : 'KANAN (Asoy!)';
+            rhythmEl.className = 'font-bold text-emerald-400';
+        }
+
+        function triggerFall() {
+            gameState = 'FALLEN';
+            speed = 0;
+            audio.playFall();
+
+            const rhythmEl = document.getElementById('stat-rhythm');
+            rhythmEl.innerText = 'TERPÈLESET! GEDÉBUK! 💥';
+            rhythmEl.className = 'font-bold text-red-500 animate-bounce';
+
+            playerTeam.rotation.x = 0.45;
+
+            setTimeout(() => {
+                if (gameState === 'FALLEN') {
+                    playerTeam.rotation.x = 0;
+                    lastFoot = null;
+                    rhythmStreak = 0;
+                    gameState = 'PLAYING';
+                    rhythmEl.innerText = 'BANGKIT & LANJUTKAN!';
+                    rhythmEl.className = 'font-bold text-amber-400';
+                }
+            }, 850 - (upgrades.balance * 75));
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'a' || e.key === 'ArrowLeft') stepFoot('L');
+            if (e.key === 'd' || e.key === 'ArrowRight') stepFoot('R');
+        });
+
+        document.getElementById('btn-left').addEventListener('click', () => stepFoot('L'));
+        document.getElementById('btn-right').addEventListener('click', () => stepFoot('R'));
+
+        let touchStartX = 0;
+        window.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+        window.addEventListener('touchend', e => {
+            let diffX = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(diffX) > 25) {
+                if (diffX > 0) stepFoot('R');
+                else stepFoot('L');
+            }
+        });
+
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            if (gameState === 'PLAYING') {
+                gameTime += delta;
+                distance += speed * delta;
+                speed = Math.max(0, speed - delta * 3.5);
+
+                const walkCycle = Math.sin(time * 22) * 0.48 * (speed > 0.5 ? 1 : 0);
+                playerTeam.userData.characters.forEach(p => {
+                    p.userData.leftLeg.rotation.x = walkCycle;
+                    p.userData.rightLeg.rotation.x = -walkCycle;
+                    p.userData.leftArm.rotation.x = -walkCycle;
+                    p.userData.rightArm.rotation.x = walkCycle;
+                });
+
+                let leadingAIProgress = 0;
+                opponentsData.forEach(ai => {
+                    if (!ai.stumbling) {
+                        ai.progress += ai.speed * delta;
+                        const aiWalk = Math.sin(time * 20 + ai.x) * 0.48;
+                        ai.teamGroup.userData.characters.forEach(p => {
+                            p.userData.leftLeg.rotation.x = aiWalk;
+                            p.userData.rightLeg.rotation.x = -aiWalk;
+                        });
+
+                        if (Math.random() < 0.0035) {
+                            ai.stumbling = true;
+                            ai.stumbleTimer = 1.0;
+                            ai.teamGroup.rotation.x = 0.4;
+                        }
+                    } else {
+                        ai.stumbleTimer -= delta;
+                        if (ai.stumbleTimer <= 0) {
+                            ai.stumbling = false;
+                            ai.teamGroup.rotation.x = 0;
+                        }
+                    }
+                    ai.teamGroup.position.z = -ai.progress;
+                    if (ai.progress > leadingAIProgress) leadingAIProgress = ai.progress;
+                });
+
+                spectatorGroups.forEach((sg, index) => {
+                    sg.position.y = Math.sin(time * 10 + index) * 0.08;
+                });
+                flagGroups.forEach((flag, index) => {
+                    flag.rotation.z = Math.sin(time * 7 + index) * 0.18;
+                });
+                clouds.forEach((cloud, index) => {
+                    cloud.position.x += delta * 0.8;
+                    if (cloud.position.x > 100) cloud.position.x = -100;
+                });
+
+                if (distance >= targetDistance) {
+                    gameState = 'FINISHED';
+                    audio.playCheer();
+                    showResult(true);
+                } else if (leadingAIProgress >= targetDistance) {
+                    gameState = 'FINISHED';
+                    showResult(false);
+                }
+
+                playerTeam.position.z = -distance;
+                camera.position.z = -distance + 5.0;
+                document.getElementById('stat-dist').innerText = Math.floor(distance);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function showResult(isWin) {
+            document.getElementById('result-modal').classList.remove('hidden');
+            document.getElementById('game-stats').classList.add('hidden');
+            document.getElementById('game-controls').classList.add('hidden');
+
+            const earnedCoins = isWin ? 100 : 35;
+            coins += earnedCoins;
+
+            document.getElementById('result-emoji').innerText = isWin ? '🏆' : '😅';
+            document.getElementById('result-title').innerText = isWin ? 'JUARA PERTAMA!' : 'DIKALAHKAN LAWAN!';
+            document.getElementById('result-desc').innerText = isWin 
+                ? 'Luar biasa! Kerjasama tim bakiakmu sangat kompak dan finish terdepan di perlombaan!'
+                : 'Sayang sekali tim lawan lebih cepat sampai garis finish. Tingkatkan bakiakmu dan coba lagi!';
+            document.getElementById('res-time').innerText = gameTime.toFixed(1);
+            document.getElementById('res-coins').innerText = `+${earnedCoins}`;
+        }
+
+        // --- Simulated Loading Process ---
+        window.onload = () => {
+            const progressBar = document.getElementById('loading-bar');
+            const loadingText = document.getElementById('loading-text');
+            const overlay = document.getElementById('loading-overlay');
+            
+            let progress = 0;
+            const loadingInterval = setInterval(() => {
+                progress += Math.floor(Math.random() * 15) + 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    progressBar.style.width = '100%';
+                    loadingText.innerText = 'Siap Bermain!';
+                    clearInterval(loadingInterval);
+                    setTimeout(() => {
+                        overlay.style.opacity = '0';
+                        overlay.style.transition = 'opacity 0.5s ease';
+                        setTimeout(() => overlay.style.display = 'none', 500);
+                        animate();
+                    }, 400);
+                } else {
+                    progressBar.style.width = progress + '%';
+                    if (progress > 40) loadingText.innerText = 'Memuat Aset 3D & Karakter...';
+                    if (progress > 75) loadingText.innerText = 'Menyiapkan Efek Suara...';
+                }
+            }, 120);
+        };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>
