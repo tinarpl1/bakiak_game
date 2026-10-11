@@ -23,7 +23,7 @@
                 <p class="text-[10px] sm:text-xs text-slate-300">Karya: <span class="text-amber-300 font-semibold">Tina, Serin, & Luna</span></p>
             </div>
         </div>
-        <div id="game-stats" class="hidden flex space-x-1.5 sm:space-x-3 items-center">
+                <div id="game-stats" class="hidden flex space-x-2 sm:space-x-3 items-center">
             <div class="bg-black/75 backdrop-blur px-2.5 py-1 rounded-xl border border-white/10 text-[11px] sm:text-sm">
                 <span class="text-slate-400">Jarak:</span> <span id="stat-dist" class="font-bold text-amber-400">0</span>/<span id="stat-target">150</span>m
             </div>
@@ -33,9 +33,12 @@
             <div class="bg-black/75 backdrop-blur px-2.5 py-1 rounded-xl border border-white/10 text-[11px] sm:text-sm">
                 <span class="text-slate-400">Koin:</span> <span id="stat-coins" class="font-bold text-amber-300">0</span>🪙
             </div>
-            <button id="pause-btn" onclick="togglePause()" class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded-xl text-[11px] sm:text-sm font-semibold transition border border-white/10">⏸</button>
-            <button onclick="exitGame()" class="bg-red-600/80 hover:bg-red-600 px-2.5 py-1 rounded-xl text-[11px] sm:text-sm font-semibold transition border border-red-500/30">🚪 Keluar</button>
+            
+            <!-- Tombol Pause & Keluar yang Lebih Serasi & Estetik -->
+            <button id="pause-btn" onclick="togglePause()" class="bg-slate-800/80 hover:bg-slate-700/80 backdrop-blur px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition border border-white/10 shadow-md">⏸</button>
+            <button onclick="exitGame()" class="bg-slate-800/80 hover:bg-red-600/80 backdrop-blur px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition border border-white/10 shadow-md flex items-center space-x-1"><span>🚪 Keluar</span></button>
         </div>
+
     </header>
 
     <!-- Main 3D Canvas Container -->
@@ -629,7 +632,6 @@
             const legGeo = new THREE.BoxGeometry(0.11, legHeight, 0.11);
             legGeo.translate(0, -legHeight / 2, 0);
 
-            // Jarak antar kaki disesuaikan biar pas di atas papan bakiak yang sudah diperkecil
             const leftLeg = new THREE.Group();
             leftLeg.position.set(-0.22, 0.7, 0);
             const upperLeftLeg = new THREE.Mesh(legGeo, pantsMat);
@@ -656,7 +658,6 @@
             const plankMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 });
             const strapMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
             
-            // Papan diperkecil (lebar 0.22, panjang 3.0) agar pas dengan ukuran kaki
             const leftPlankGroup = new THREE.Group();
             leftPlankGroup.position.set(-0.22, 0.03, 0);
             const leftPlankMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 3.0), plankMat);
@@ -769,7 +770,7 @@
                 distance += speed * delta;
                 speed = Math.max(0, speed - delta * 3.5);
 
-                const isMoving = speed > 0.2;
+                const isMoving = speed > 0.2 ? 1 : 0; // Deteksi apakah sedang berhenti atau bergerak
                 const stepAngle = isMoving ? Math.sin(time * 22) * 0.35 : 0;
                 const liftHeight = isMoving ? Math.max(0, Math.sin(time * 22)) * 0.1 : 0;
                 const liftHeightR = isMoving ? Math.max(0, -Math.sin(time * 22)) * 0.1 : 0;
@@ -781,29 +782,31 @@
                     p.userData.rightArm.rotation.x = stepAngle * 0.7;
                 });
 
-                playerTeam.userData.leftPlankGroup.position.z = Math.sin(time * 22) * 0.18;
+                // Papan ikut berhenti total pas pemain berhenti
+                playerTeam.userData.leftPlankGroup.position.z = (isMoving ? Math.sin(time * 22) * 0.18 : 0);
                 playerTeam.userData.leftPlankGroup.position.y = 0.03 + liftHeight;
 
-                playerTeam.userData.rightPlankGroup.position.z = -Math.sin(time * 22) * 0.18;
+                playerTeam.userData.rightPlankGroup.position.z = (isMoving ? -Math.sin(time * 22) * 0.18 : 0);
                 playerTeam.userData.rightPlankGroup.position.y = 0.03 + liftHeightR;
 
                 let leadingAIProgress = 0;
                 opponentsData.forEach(ai => {
                     if (!ai.stumbling) {
                         ai.progress += ai.speed * delta;
-                        const aiStep = Math.sin(time * 20 + ai.x) * 0.35;
-                        const aiLiftL = Math.max(0, Math.sin(time * 20 + ai.x)) * 0.1;
-                        const aiLiftR = Math.max(0, -Math.sin(time * 20 + ai.x)) * 0.1;
+                        const aiMoving = ai.speed > 0.2 ? 1 : 0;
+                        const aiStep = aiMoving ? Math.sin(time * 20 + ai.x) * 0.35 : 0;
+                        const aiLiftL = aiMoving ? Math.max(0, Math.sin(time * 20 + ai.x)) * 0.1 : 0;
+                        const aiLiftR = aiMoving ? Math.max(0, -Math.sin(time * 20 + ai.x)) * 0.1 : 0;
 
                         ai.teamGroup.userData.characters.forEach(p => {
                             p.userData.leftLeg.rotation.x = aiStep;
                             p.userData.rightLeg.rotation.x = -aiStep;
                         });
 
-                        ai.teamGroup.userData.leftPlankGroup.position.z = Math.sin(time * 20 + ai.x) * 0.18;
+                        ai.teamGroup.userData.leftPlankGroup.position.z = aiMoving ? Math.sin(time * 20 + ai.x) * 0.18 : 0;
                         ai.teamGroup.userData.leftPlankGroup.position.y = 0.03 + aiLiftL;
 
-                        ai.teamGroup.userData.rightPlankGroup.position.z = -Math.sin(time * 20 + ai.x) * 0.18;
+                        ai.teamGroup.userData.rightPlankGroup.position.z = aiMoving ? -Math.sin(time * 20 + ai.x) * 0.18 : 0;
                         ai.teamGroup.userData.rightPlankGroup.position.y = 0.03 + aiLiftR;
 
                         if (Math.random() < 0.0035) {
